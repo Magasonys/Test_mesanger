@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mega Messenger</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#0f172a;
+  font-family:-apple-system,BlinkMacSystemFont,Arial;
+  color:#fff;
+}
+.hidden{display:none}
+
+/* AUTH */
+.auth{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+.auth h1{margin-bottom:20px}
+.auth input{
+  width:80%;
+  padding:14px;
+  margin:10px 0;
+  border-radius:14px;
+  border:none;
+}
+.auth button{
+  width:80%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#2563eb;
+  color:#fff;
+  font-size:16px;
+}
+
+/* CHAT */
+.chat{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+.header{
+  padding:14px;
+  background:#1e293b;
+  text-align:center;
+  font-weight:bold;
+}
+.messages{
+  flex:1;
+  padding:10px;
+  overflow-y:auto;
+}
+.msg{
+  background:#2563eb;
+  padding:10px;
+  border-radius:14px;
+  margin:6px 0;
+  max-width:75%;
+  animation:pop .2s ease;
+}
+.msg.me{background:#1d4ed8;margin-left:auto}
+.msg img{max-width:100%;border-radius:10px}
+.msg audio{width:100%}
+
+/* INPUT */
+.input{
+  display:flex;
+  align-items:center;
+  padding:8px;
+  background:#1e293b;
+}
+.input button{
+  background:none;
+  border:none;
+  color:white;
+  font-size:22px;
+  margin:0 6px;
+}
+.input input[type=text]{
+  flex:1;
+  padding:12px;
+  border-radius:20px;
+  border:none;
+}
+
+/* ANIM */
+@keyframes pop{
+  from{transform:scale(.9);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+</style>
+</head>
+
+<body>
+
+<!-- AUTH -->
+<div id="auth" class="auth">
+  <h1>Регистрация</h1>
+  <input id="username" placeholder="Твоё имя">
+  <button onclick="login()">Войти</button>
+</div>
+
+<!-- CHAT -->
+<div id="chat" class="chat hidden">
+  <div class="header">💬 Mega Messenger</div>
+  <div id="messages" class="messages"></div>
+
+  <div class="input">
+    <input type="file" id="photo" accept="image/*" hidden>
+    <button onclick="pickPhoto()">📷</button>
+
+    <button id="mic"
+      ontouchstart="startRecord()"
+      ontouchend="stopRecord()">🎤</button>
+
+    <input id="text" placeholder="Сообщение">
+    <button onclick="sendText()">➤</button>
+  </div>
+</div>
+
+<script>
+let user = localStorage.getItem('user');
+let recorder, chunks=[];
+
+if(user){
+  showChat();
+  loadMessages();
+}
+
+function login(){
+  const name = username.value.trim();
+  if(!name) return alert("Введите имя");
+  localStorage.setItem('user', name);
+  user = name;
+  showChat();
+}
+
+function showChat(){
+  auth.classList.add('hidden');
+  chat.classList.remove('hidden');
+}
+
+function saveMessages(){
+  localStorage.setItem('messages', messages.innerHTML);
+}
+
+function loadMessages(){
+  const data = localStorage.getItem('messages');
+  if(data) messages.innerHTML = data;
+}
+
+function addMsg(html, me=true){
+  const d = document.createElement('div');
+  d.className = 'msg'+(me?' me':'');
+  d.innerHTML = html;
+  messages.appendChild(d);
+  messages.scrollTop = messages.scrollHeight;
+  saveMessages();
+}
+
+function sendText(){
+  const t = text.value.trim();
+  if(!t) return;
+  addMsg(t);
+  text.value='';
+}
+
+function pickPhoto(){
+  photo.click();
+}
+
+photo.onchange = ()=>{
+  const f = photo.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=> addMsg(`<img src="${r.result}">`);
+  r.readAsDataURL(f);
+};
+
+async function startRecord(){
+  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  recorder = new MediaRecorder(stream);
+  chunks=[];
+  recorder.ondataavailable=e=>chunks.push(e.data);
+  recorder.start();
+}
+
+function stopRecord(){
+  if(!recorder) return;
+  recorder.stop();
+  recorder.onstop=()=>{
+    const blob = new Blob(chunks,{type:'audio/webm'});
+    const url = URL.createObjectURL(blob);
+    addMsg(`<audio controls src="${url}"></audio>`);
+  };
+}
+</script>
+
+</body>
+</html>
+
